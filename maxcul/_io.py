@@ -13,7 +13,7 @@ READLINE_TIMEOUT = 0.5
 
 COMMAND_REQUEST_BUDGET = 'X'
 
-MIN_REQUIRED_BUDGET = 1000
+MIN_REQUIRED_BUDGET = 2000
 
 
 class CulIoThread(threading.Thread):
@@ -39,7 +39,7 @@ class CulIoThread(threading.Thread):
     @property
     def has_send_budget(self):
         """Ask CUL if we have enough budget of the 1 percent rule left"""
-        return self._remaining_budget >= 2000
+        return self._remaining_budget >= MIN_REQUIRED_BUDGET
 
     def enqueue_command(self, command):
         """Pushes a new command to be sent to the CUL stick onto the queue"""
@@ -63,6 +63,9 @@ class CulIoThread(threading.Thread):
             while self._remaining_budget == 0:
                 self._receive_message()
         if self._remaining_budget < MIN_REQUIRED_BUDGET:
+            LOGGER.debug(
+                "Unable to send messages, budget to low. Discarding pending messages.")
+            self._send_queue.clear()
             missing = MIN_REQUIRED_BUDGET - self._remaining_budget
             time.sleep(missing / 10)
             self._writeline(COMMAND_REQUEST_BUDGET)

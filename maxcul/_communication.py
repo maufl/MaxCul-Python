@@ -119,6 +119,7 @@ class MaxConnection(threading.Thread):
     def wakeup(self, receiver_id):
         LOGGER.debug("Waking device %d", receiver_id)
         msg = WakeUpMessage(
+            sender_id=self.sender_id,
             counter=self._next_counter(),
             receiver_id=receiver_id)
         success = self._send_message(msg)
@@ -149,7 +150,10 @@ class MaxConnection(threading.Thread):
             LOGGER.error(
                 "Communication with serial device is not established, unable to send a message")
             return False
-        LOGGER.debug("Sending message %s", msg)
+        if msg.counter in self._outstanding_acks:
+            LOGGER.debug("Repeating message %s", msg)
+        else:
+            LOGGER.debug("Sending message %s", msg)
         try:
             raw_message = msg.encode_message()
             self.com_thread.enqueue_command(raw_message)
