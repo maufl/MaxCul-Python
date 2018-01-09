@@ -190,6 +190,9 @@ class MaxConnection(threading.Thread):
                 del self._outstanding_acks[counter]
 
     def _send_ack(self, msg):
+        if not self.com_thread.has_send_budget:
+            LOGGER.debug("Won't sent ack because budget is too low")
+            return
         ack_msg = msg.respond_with(
             AckMessage,
             counter=msg.counter,
@@ -197,6 +200,9 @@ class MaxConnection(threading.Thread):
         self._send_message(ack_msg)
 
     def _send_timeinformation(self, msg):
+        if not self.com_thread.has_send_budget:
+            LOGGER.debug("Won't sent time information because budget is too low")
+            return
         resp_msg = msg.respond_with(
             TimeInformationMessage,
             counter=self._next_counter(),
@@ -206,19 +212,18 @@ class MaxConnection(threading.Thread):
         self._send_message(resp_msg)
 
     def _send_pong(self, msg):
+        if not self.com_thread.has_send_budget:
+            LOGGER.debug("Won't sent pong because budget is too low")
+            return False
         resp_msg = msg.respond_with(
             PairPongMessage,
             counter=self._next_counter(),
             sender_id=self.sender_id,
             devicetype='Cube'
         )
-        if self.com_thread.has_send_budget:
-            if self._send_message(resp_msg):
-                self._paired_devices.append(msg.sender_id)
-                return True
-            return False
-        LOGGER.info(
-            "NOT responding to pair send budget is insufficient to be on time")
+        if self._send_message(resp_msg):
+            self._paired_devices.append(msg.sender_id)
+            return True
         return False
 
     def _handle_message(self, msg, signal_strenth):
