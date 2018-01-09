@@ -64,13 +64,11 @@ class CulIoThread(threading.Thread):
             while self._remaining_budget == 0:
                 self._receive_message()
         if self._remaining_budget < MIN_REQUIRED_BUDGET:
-            missing = MIN_REQUIRED_BUDGET - self._remaining_budget
-            LOGGER.debug(
-                "Unable to send messages, budget to low. Waiting %d seconds for new budget.",
-                missing / 10
-            )
-            time.sleep(missing / 10)
-            self._writeline(COMMAND_REQUEST_BUDGET)
+            LOGGER.debug("Unable to send messages, budget to low.")
+            while self._remaining_budget < MIN_REQUIRED_BUDGET:
+                self._writeline(COMMAND_REQUEST_BUDGET)
+                self._receive_message()
+                time.sleep(1)
         time.sleep(0.2)
 
     def _receive_message(self):
