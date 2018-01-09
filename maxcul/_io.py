@@ -13,14 +13,14 @@ READLINE_TIMEOUT = 0.5
 
 COMMAND_REQUEST_BUDGET = 'X'
 
-MIN_REQUIRED_BUDGET = 2000
+MIN_REQUIRED_BUDGET = 1500
 
 
 class CulIoThread(threading.Thread):
     """Low-level serial communication thread base"""
 
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, device_path, baudrate):
+    def __init__(self, device_path, baudrate, sent_callback=None):
         super().__init__()
         self.read_queue = queue.Queue()
         self._send_queue = deque([], MAX_QUEUED_COMMANDS)
@@ -30,6 +30,7 @@ class CulIoThread(threading.Thread):
         self._cul_version = None
         self._com_port = None
         self._remaining_budget = 0
+        self._sent_callback = sent_callback
 
     @property
     def cul_version(self):
@@ -63,10 +64,11 @@ class CulIoThread(threading.Thread):
             while self._remaining_budget == 0:
                 self._receive_message()
         if self._remaining_budget < MIN_REQUIRED_BUDGET:
-            LOGGER.debug(
-                "Unable to send messages, budget to low. Discarding pending messages.")
-            self._send_queue.clear()
             missing = MIN_REQUIRED_BUDGET - self._remaining_budget
+            LOGGER.debug(
+                "Unable to send messages, budget to low. Waiting %d seconds for new budget.",
+                missing / 10
+            )
             time.sleep(missing / 10)
             self._writeline(COMMAND_REQUEST_BUDGET)
         time.sleep(0.2)
@@ -87,13 +89,22 @@ class CulIoThread(threading.Thread):
     def _send_pending_message(self):
         try:
             pending_message = self._send_queue.pop()
-            if self._remaining_budget > len(pending_message) * 10:
-                self._writeline(pending_message)
+        except IndexError:
+            return
+        try:
+            command = pending_message.encode_message()
+            if self._remaining_budget > len(command) * 10:
+                self._writeline(command)
+                if self._sent_callback:
+                    self._sent_callback(pending_message)
             else:
                 self._send_queue.append(pending_message)
                 self._writeline(COMMAND_REQUEST_BUDGET)
-        except IndexError:
-            pass
+        except Exception as err:
+            LOGGER.error(
+                "Exception <%s> was raised while encoding message %s. Please consider reporting this as a bug.",
+                err,
+                pending_message)
 
     def _init_cul(self):
         if not self._open_serial_device():

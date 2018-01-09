@@ -71,7 +71,10 @@ class MaxConnection(threading.Thread):
             paired_devices=None):
         super().__init__()
         self.sender_id = sender_id
-        self.com_thread = CulIoThread(device_path, baudrate)
+        self.com_thread = CulIoThread(
+            device_path,
+            baudrate,
+            sent_callback = self._sent_callback)
         self.stop_requested = threading.Event()
         self._pairing_enabled = threading.Event()
         self._paired_devices = paired_devices or []
@@ -151,28 +154,30 @@ class MaxConnection(threading.Thread):
                 "Communication with serial device is not established, unable to send a message")
             return False
         if msg.counter in self._outstanding_acks:
-            LOGGER.debug("Repeating message %s", msg)
+            (_, attempt, _) = self._outstanding_acks[msg.counter]
+            LOGGER.debug("Repeating message %s attempt %d", msg, attempt)
         else:
             LOGGER.debug("Sending message %s", msg)
-        try:
-            raw_message = msg.encode_message()
-            self.com_thread.enqueue_command(raw_message)
-            return True
-        except Exception as err:
-            LOGGER.error(
-                "Exception <%s> was raised while encoding message %s. Please consider reporting this as a bug.",
-                err,
-                msg)
-            return False
+        self.com_thread.enqueue_command(msg)
+        return True
 
     def _await_ack(self, msg):
+        self._outstanding_acks[msg.counter] = (None, 1, msg)
+
+    def _sent_callback(self, msg):
+        if not msg.counter in self._outstanding_acks:
+            return
+        LOGGER.debug("Message %s was sent, starting timeout for retry.", msg)
         now = int(time.monotonic())
-        self._outstanding_acks[msg.counter] = (now, 1, msg)
+        (_, attempt, _ ) = self._outstanding_acks[msg.counter]
+        self._outstanding_acks[msg.counter] = (now, attempt, msg)
 
     def _resend_message(self):
         now = int(time.monotonic())
         for counter, (when, attempt,
                       msg) in self._outstanding_acks.copy().items():
+            if when is None:
+                continue
             if when + BACKOFF_INTERVAL * attempt > now:
                 continue
             if attempt == MAX_ATTEMPTS:
@@ -180,7 +185,7 @@ class MaxConnection(threading.Thread):
                 LOGGER.warn("Did not receive an ACK for message %s", msg)
                 continue
             if self._send_message(msg):
-                self._outstanding_acks[counter] = (now, attempt + 1, msg)
+                self._outstanding_acks[counter] = (None, attempt + 1, msg)
             else:
                 del self._outstanding_acks[counter]
 
