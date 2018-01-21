@@ -156,11 +156,11 @@ class PairPingMessage(MoritzMessage):
 
 class PairPongMessage(MoritzMessage):
     """Awaited after PairPingMessage is sent by component"""
-    devicetype = 'Cube'
+    device_type = CUBE
 
     @staticmethod
     def decode_payload(payload):
-        return {'devicetype': DEVICE_TYPES[int(payload)]}
+        return {'device_type': DEVICE_TYPES[int(payload)]}
 
     def encode_payload(self):
         return str(DEVICE_TYPES_BY_NAME[self.devicetype]).zfill(2)

@@ -42,7 +42,8 @@ from maxcul._io import CulIoThread
 from maxcul._const import (
     EVENT_DEVICE_PAIRED, EVENT_DEVICE_REPAIRED, EVENT_THERMOSTAT_UPDATE,
     ATTR_DEVICE_ID, ATTR_DESIRED_TEMPERATURE, ATTR_MEASURED_TEMPERATURE,
-    ATTR_MODE, ATTR_BATTERY_LOW
+    ATTR_MODE, ATTR_BATTERY_LOW, ATTR_DEVICE_TYPE, ATTR_DEVICE_SERIAL,
+
 )
 
 # local constants
@@ -74,7 +75,7 @@ class MaxConnection(threading.Thread):
         self.com_thread = CulIoThread(
             device_path,
             baudrate,
-            sent_callback = self._sent_callback)
+            sent_callback=self._sent_callback)
         self.stop_requested = threading.Event()
         self._pairing_enabled = threading.Event()
         self._paired_devices = paired_devices or []
@@ -165,11 +166,11 @@ class MaxConnection(threading.Thread):
         self._outstanding_acks[msg.counter] = (None, 1, msg)
 
     def _sent_callback(self, msg):
-        if not msg.counter in self._outstanding_acks:
+        if msg.counter not in self._outstanding_acks:
             return
         LOGGER.debug("Message %s was sent, starting timeout for retry.", msg)
         now = int(time.monotonic())
-        (_, attempt, _ ) = self._outstanding_acks[msg.counter]
+        (_, attempt, _) = self._outstanding_acks[msg.counter]
         self._outstanding_acks[msg.counter] = (now, attempt, msg)
 
     def _resend_message(self):
@@ -201,7 +202,8 @@ class MaxConnection(threading.Thread):
 
     def _send_timeinformation(self, msg):
         if not self.com_thread.has_send_budget:
-            LOGGER.debug("Won't sent time information because budget is too low")
+            LOGGER.debug(
+                "Won't sent time information because budget is too low")
             return
         resp_msg = msg.respond_with(
             TimeInformationMessage,
@@ -245,13 +247,21 @@ class MaxConnection(threading.Thread):
                 if self._send_pong(msg):
                     self._call_callback(
                         EVENT_DEVICE_PAIRED, {
-                            ATTR_DEVICE_ID: msg.sender_id})
+                            ATTR_DEVICE_ID: msg.sender_id,
+                            ATTR_DEVICE_TYPE: msg.device_type,
+                            ATTR_DEVICE_SERIAL: msg.device_serial,
+                            ATTR_FIRMWARE_VERSION: msg.firmware_version
+                        })
             elif msg.receiver_id == self.sender_id:
                 # pairing after battery replacement
                 if self._send_pong(msg):
                     self._call_callback(
                         EVENT_DEVICE_REPAIRED, {
-                            ATTR_DEVICE_ID: msg.sender_id})
+                            ATTR_DEVICE_ID: msg.sender_id,
+                            ATTR_DEVICE_TYPE: msg.device_type,
+                            ATTR_DEVICE_SERIAL: msg.device_serial,
+                            ATTR_FIRMWARE_VERSION: msg.firmware_version
+                        })
             else:
                 # pair to someone else after battery replacement, don't care
                 LOGGER.debug(
@@ -278,13 +288,24 @@ class MaxConnection(threading.Thread):
             if msg.state == "ok":
                 self._propagate_thermostat_change(msg)
 
-        elif isinstance(msg, ShutterContactStateMessage, WallThermostatStateMessage, SetTemperatureMessage, WallThermostatControlMessage):
+        elif isinstance(msg, ShutterContactStateMessage):
+            self._send_ack(msg)
+            self._propagate_shutter_state(msg)
+
+        elif isinstance(msg, WallThermostatStateMessage, SetTemperatureMessage, WallThermostatControlMessage):
             self._send_ack(msg)
 
         else:
             LOGGER.warning(
                 "Unhandled Message of type %s, contains %s",
                 msg.__class__.__name__, msg)
+
+    def _propagate_shutter_state(self, msg):
+        payload = {
+            ATTR_BATTERY_LOW: msg.battery_low,
+            ATTR_SHUTTER_STATE: msg.state
+        }
+        self._call_callback(EVENT_SHUTTER_UPDATE, payload)
 
     def _propagate_thermostat_change(self, msg):
         payload = {
