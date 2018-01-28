@@ -36,14 +36,15 @@ from maxcul._messages import (
     ShutterContactStateMessage,
     WallThermostatStateMessage,
     WallThermostatControlMessage,
-    WakeUpMessage
+    WakeUpMessage,
+    PushButtonStateMessage
 )
 from maxcul._io import CulIoThread
 from maxcul._const import (
     EVENT_DEVICE_PAIRED, EVENT_DEVICE_REPAIRED, EVENT_THERMOSTAT_UPDATE,
+    EVENT_SHUTTER_UPDATE, EVENT_PUSH_BUTTON_UPDATE,
     ATTR_DEVICE_ID, ATTR_DESIRED_TEMPERATURE, ATTR_MEASURED_TEMPERATURE,
     ATTR_MODE, ATTR_BATTERY_LOW, ATTR_DEVICE_TYPE, ATTR_DEVICE_SERIAL,
-
 )
 
 # local constants
@@ -292,6 +293,10 @@ class MaxConnection(threading.Thread):
             self._send_ack(msg)
             self._propagate_shutter_state(msg)
 
+        elif isinstance(msg, PushButtonStateMessage):
+            self.send_ack(msg)
+            self._propagate_push_button_state(msg)
+
         elif isinstance(msg, WallThermostatStateMessage, SetTemperatureMessage, WallThermostatControlMessage):
             self._send_ack(msg)
 
@@ -303,7 +308,14 @@ class MaxConnection(threading.Thread):
     def _propagate_shutter_state(self, msg):
         payload = {
             ATTR_BATTERY_LOW: msg.battery_low,
-            ATTR_SHUTTER_STATE: msg.state
+            ATTR_STATE: msg.state
+        }
+        self._call_callback(EVENT_PUSH_BUTTON_UPDATE, payload)
+
+    def _propagate_shutter_state(self, msg):
+        payload = {
+            ATTR_BATTERY_LOW: msg.battery_low,
+            ATTR_STATE: msg.state
         }
         self._call_callback(EVENT_SHUTTER_UPDATE, payload)
 
