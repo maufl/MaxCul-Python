@@ -80,6 +80,8 @@ class CulIoThread(threading.Thread):
                 LOGGER.debug(
                     "Got pending budget: %sms", self._remaining_budget)
             elif line.startswith("Z"):
+                LOGGER.debug(
+                    "Received new moritz message: %s", line)
                 self.read_queue.put(line)
             else:
                 LOGGER.debug("Got unhandled response from CUL: '%s'", line)
