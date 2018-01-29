@@ -127,10 +127,14 @@ class MoritzMessage(object):
         return klass(**params)
 
     def __repr__(self):
-        return "<%s counter:%x flag:%x sender:%x receiver:%x group:%x >" % (
-            self.__class__.__name__, self.counter, self.flag, self.sender_id, self.receiver_id, self.group_id
-        )
-
+        s = "<{}".format(self.__class__.__name__)
+        for key in self.__dict__:
+            value = self.__dict__[key]
+            if isinstance(value, int):
+                s += " {}:{:x}".format(key, value)
+            else:
+                s += " {}:{:}".format(key, value)
+        return s + ">" 
 
 class PairPingMessage(MoritzMessage):
     """Thermostats send this request on long boost keypress"""
@@ -566,7 +570,7 @@ class PushButtonStateMessage(MoritzMessage):
 
     @staticmethod
     def decode_payload(payload):
-        payload = payload.encode('ascii')
+        payload = bytes.fromhex(payload)
         return {
             'state': bool(payload[1] & 0x1),
             'rferror': bool(payload[0] & 0b100000),
