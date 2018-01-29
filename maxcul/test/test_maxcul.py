@@ -304,7 +304,14 @@ MESSAGE_SAMPLES = ["Z0C250442016F69039EA50028CC28",
                    "Z0C890442016F69039EA50028CA2B",
                    "Z0E890202039EA5016F69000119002834",
                    "Z0C8A0442016F6903CEE20028CA2F",
-                   "Z0E8A020203CEE2016F69000119002828"]
+                   "Z0E8A020203CEE2016F69000119002828",
+                   "Z0CA0025000077712345600100121",
+                   "Z0CA002500007771234560050011E",
+                   "Z0CA002500007771234560050011E",
+                   "Z0CA102500007771234560010001E",
+                   "Z0CA102500007771234560050001E",
+                   "Z0CA102500007771234560050001F",
+                   "Z0CA1025000077712345600500020"]
 
 class MessageSampleInputListTestCase(unittest.TestCase):
     def test_list_input(self):
@@ -399,7 +406,7 @@ class MessageSampleInputTestCase(unittest.TestCase):
         self.assertEqual(msg.receiver_id, 0xE016C)
         self.assertEqual(msg.group_id, 0)
         self.assertEqual(msg.decode_payload('00'), {
-            'devicetype': "Cube",
+            'device_type': "Cube",
         })
 
     def test_time_information_question(self):

@@ -566,6 +566,7 @@ class PushButtonStateMessage(MoritzMessage):
 
     @staticmethod
     def decode_payload(payload):
+        payload = payload.encode('ascii')
         return {
             'state': bool(payload[1] & 0x1),
             'rferror': bool(payload[0] & 0b100000),
