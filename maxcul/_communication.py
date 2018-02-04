@@ -295,7 +295,7 @@ class MaxConnection(threading.Thread):
             self._propagate_shutter_state(msg)
 
         elif isinstance(msg, PushButtonStateMessage):
-            self.send_ack(msg)
+            self._send_ack(msg)
             self._propagate_push_button_state(msg)
 
         elif isinstance(msg, WallThermostatStateMessage, SetTemperatureMessage, WallThermostatControlMessage):
