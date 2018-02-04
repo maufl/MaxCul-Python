@@ -8,10 +8,7 @@
     :copyright: (c) 2014 by Markus Ullmann.
     :license: BSD, see LICENSE for more details.
 """
-
-# environment constants
-
-# python imports
+# flake8: noqa
 
 from maxcul._communication import MaxConnection
 from maxcul._const import (
@@ -36,9 +33,4 @@ from maxcul._exceptions import (
     LengthNotMatchingError,
     MissingPayloadParameterError)
 
-# environment imports
-
-# custom imports
-
-# local constants
 __version__ = "0.1.8"

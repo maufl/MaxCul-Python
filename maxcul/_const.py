@@ -63,7 +63,7 @@ MAX_TEMPERATURE = 30.5
 
 EVENT_THERMOSTAT_UPDATE = 'thermostat_update'
 EVENT_SHUTTER_UPDATE = 'shutter_update'
-EVENT_PUSH_BUTTON_UPDATE  = 'push_button_update'
+EVENT_PUSH_BUTTON_UPDATE = 'push_button_update'
 EVENT_DEVICE_PAIRED = 'device_paired'
 EVENT_DEVICE_REPAIRED = 'device_repaired'
 

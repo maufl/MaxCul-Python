@@ -312,6 +312,7 @@ MESSAGE_SAMPLES = ["Z0C250442016F69039EA50028CC28",
                    "Z0B01003001997700000000021C",
                    "Z0B020030019977000000000036"]
 
+
 class MessageSampleInputListTestCase(unittest.TestCase):
     def test_list_input(self):
         for sample in MESSAGE_SAMPLES:
@@ -322,6 +323,7 @@ class MessageSampleInputListTestCase(unittest.TestCase):
         sample = "Z0E250210039EA5016F6900011904283C"
         with self.assertRaises(NotImplementedError):
             MoritzMessage.decode_message(sample)
+
 
 class MessageSampleInputTestCase(unittest.TestCase):
     def test_thermostat_state(self):
@@ -427,7 +429,10 @@ class MessageSampleInputTestCase(unittest.TestCase):
         self.assertEqual(msg.sender_id, 0x123456)
         self.assertEqual(msg.receiver_id, 0xE016C)
         self.assertEqual(msg.group_id, 0)
-        self.assertEqual(msg.decode_payload("0E0102E117"), {'datetime': datetime(2014, 12, 1, 2, 33, 23)})
+        self.assertEqual(
+            msg.decode_payload("0E0102E117"), {
+                'datetime': datetime(
+                    2014, 12, 1, 2, 33, 23)})
 
     def test_wallthermostat_control_message(self):
         sample = "Z0CB9044217A95512DC400019D9"
@@ -442,7 +447,8 @@ class MessageSampleInputTestCase(unittest.TestCase):
             "desired_temperature": 12.5,
             "temperature": 21.7
         })
-        #wallthermostat updated <WallThermostatStateMessage counter:c0 flag:4 sender:17a955 receiver:0 group:0 payload:59011900D9>
+        # wallthermostat updated <WallThermostatStateMessage counter:c0 flag:4
+        # sender:17a955 receiver:0 group:0 payload:59011900D9>
 
 
 class MessageGeneralOutputTestCase(unittest.TestCase):
@@ -498,4 +504,6 @@ class MessageOutputSampleTestCase(unittest.TestCase):
         msg.receiver_id = 0xE016C
         msg.group_id = 0x0
         msg.datetime = datetime(2014, 12, 1, 2, 33, 23)
-        self.assertEqual(msg.encode_message(), "Zs0F0204031234560E016C000E0102E117")
+        self.assertEqual(
+            msg.encode_message(),
+            "Zs0F0204031234560E016C000E0102E117")

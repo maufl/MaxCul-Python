@@ -138,7 +138,8 @@ class MoritzMessage(object):
                 s += " {}:{:x}".format(key, value)
             else:
                 s += " {}:{:}".format(key, value)
-        return s + ">" 
+        return s + ">"
+
 
 class PairPingMessage(MoritzMessage):
     """Thermostats send this request on long boost keypress"""

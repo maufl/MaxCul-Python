@@ -3,9 +3,10 @@
     maxcul.communication
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    There are two communication classes available which should run in their own thread.
-    CULComThread performs low-level serial communication, CULMessageThread performs high-level
-    communication and spawns a CULComThread for its low-level needs.
+    There are two communication classes available which should run in
+    their own thread. CULComThread performs low-level serial communication,
+    CULMessageThread performs high-level communication and spawns a
+    CULComThread for its low-level needs.
 
     Generally just use CULMessageThread unless you have a good reason not to.
 
