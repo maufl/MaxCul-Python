@@ -25,7 +25,6 @@ import time
 import logging
 
 # custom imports
-from maxcul._exceptions import MoritzError
 from maxcul._messages import (
     MoritzMessage,
     PairPingMessage, PairPongMessage,
@@ -306,7 +305,7 @@ class MaxConnection(threading.Thread):
                 "Unhandled Message of type %s, contains %s",
                 msg.__class__.__name__, msg)
 
-    def _propagate_shutter_state(self, msg):
+    def _propagate_push_button_state(self, msg):
         payload = {
             ATTR_BATTERY_LOW: msg.battery_low,
             ATTR_STATE: msg.state

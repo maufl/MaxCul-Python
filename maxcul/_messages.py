@@ -19,10 +19,14 @@ import struct
 
 # custom imports
 from maxcul._exceptions import (
-    MoritzError, LengthNotMatchingError,
+    LengthNotMatchingError,
     MissingPayloadParameterError, UnknownMessageError
 )
-from maxcul._const import *
+from maxcul._const import (
+    CUBE, DEVICE_TYPES, DEVICE_TYPES_BY_NAME,
+    MODE_IDS, BOOST_DURATION, DECALC_DAYS,
+    SHUTTER_STATES
+)
 
 
 class MoritzMessage(object):
@@ -267,7 +271,7 @@ class ConfigTemperaturesMessage(MoritzMessage):
          offset,
          window_Open_Temperature,
          window_Open_Duration) = struct.unpack(">BBBBBBB",
-                                               bytearray.fromhex(self.payload[:14]))
+                                               bytearray.fromhex(payload[:14]))
 
         result = {
             'comfort_Temperature': comfort / 2,
