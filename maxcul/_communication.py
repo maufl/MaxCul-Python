@@ -311,6 +311,7 @@ class MaxConnection(threading.Thread):
 
     def _propagate_push_button_state(self, msg):
         payload = {
+            ATTR_DEVICE_ID: msg.sender_id,
             ATTR_BATTERY_LOW: msg.battery_low,
             ATTR_STATE: msg.state
         }
@@ -318,6 +319,7 @@ class MaxConnection(threading.Thread):
 
     def _propagate_shutter_state(self, msg):
         payload = {
+            ATTR_DEVICE_ID: msg.sender_id,
             ATTR_BATTERY_LOW: msg.battery_low,
             ATTR_STATE: msg.state
         }
