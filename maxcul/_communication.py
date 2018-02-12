@@ -106,6 +106,9 @@ class MaxConnection(threading.Thread):
             self._pairing_enabled.clear()
         threading.Timer(duration, clear_pair).start()
 
+    def add_paired_device(self, device_id):
+        self._paired_devices.append(device_id)
+
     def set_temperature(self, receiver_id, temperature, mode):
         LOGGER.debug(
             "Setting temperature for %d to %d %s",
