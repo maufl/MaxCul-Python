@@ -26,6 +26,7 @@ from maxcul._const import (
     ATTR_MEASURED_TEMPERATURE,
     ATTR_MODE,
     ATTR_BATTERY_LOW,
+    ATTR_STATE,
 )
 from maxcul._exceptions import (
     MoritzError,
