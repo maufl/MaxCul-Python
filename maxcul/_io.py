@@ -79,6 +79,11 @@ class CulIoThread(threading.Thread):
                 self._remaining_budget = int(line[3:].strip()) * 10 or 1
                 LOGGER.debug(
                     "Got pending budget: %sms", self._remaining_budget)
+            elif line.startswith("ZERR"):
+                LOGGER.warning(
+                    "Received error message from CUL stick: {}",
+                    line
+                )
             elif line.startswith("Z"):
                 LOGGER.debug(
                     "Received new moritz message: %s", line)
