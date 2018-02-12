@@ -569,18 +569,18 @@ class SetEcoTemperatureMessage(MoritzMessage):
 class PushButtonStateMessage(MoritzMessage):
 
     state = None
-    rferror = None
+    is_paired = None
     battery_low = None
-    is_retransmission = None
+    rferror = None
 
     @staticmethod
     def decode_payload(payload):
         payload = bytes.fromhex(payload)
         return {
             'state': bool(payload[1] & 0x1),
-            'rferror': bool(payload[0] & 0b100000),
-            'battery_low': bool(payload[0] & 0b1000000),
-            'is_retransmission': bool(payload[0] & 0x50)
+            'is_paired': bool(payload[0] & 0b10000),
+            'rferror': bool(payload[0] & 0b1000000),
+            'battery_low': bool(payload[0] & 0b10000000)
         }
 
 
