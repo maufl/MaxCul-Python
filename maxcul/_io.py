@@ -81,7 +81,7 @@ class CulIoThread(threading.Thread):
                     "Got pending budget: %sms", self._remaining_budget)
             elif line.startswith("ZERR"):
                 LOGGER.warning(
-                    "Received error message from CUL stick: {}",
+                    "Received error message from CUL stick: '%s'",
                     line
                 )
             elif line.startswith("Z"):
