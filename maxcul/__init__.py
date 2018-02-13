@@ -16,6 +16,8 @@ from maxcul._const import (
     EVENT_DEVICE_PAIRED,
     EVENT_DEVICE_REPAIRED,
     EVENT_THERMOSTAT_UPDATE,
+    EVENT_SHUTTER_UPDATE,
+    EVENT_PUSH_BUTTON_UPDATE,
     # Thermostat modes
     MODE_AUTO, MODE_BOOST, MODE_MANUAL, MODE_TEMPORARY,
     # Temperature constants
@@ -34,4 +36,4 @@ from maxcul._exceptions import (
     LengthNotMatchingError,
     MissingPayloadParameterError)
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
