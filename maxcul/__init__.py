@@ -8,10 +8,7 @@
     :copyright: (c) 2014 by Markus Ullmann.
     :license: BSD, see LICENSE for more details.
 """
-
-# environment constants
-
-# python imports
+# flake8: noqa
 
 from maxcul._communication import MaxConnection
 from maxcul._const import (
@@ -19,6 +16,8 @@ from maxcul._const import (
     EVENT_DEVICE_PAIRED,
     EVENT_DEVICE_REPAIRED,
     EVENT_THERMOSTAT_UPDATE,
+    EVENT_SHUTTER_UPDATE,
+    EVENT_PUSH_BUTTON_UPDATE,
     # Thermostat modes
     MODE_AUTO, MODE_BOOST, MODE_MANUAL, MODE_TEMPORARY,
     # Temperature constants
@@ -29,6 +28,7 @@ from maxcul._const import (
     ATTR_MEASURED_TEMPERATURE,
     ATTR_MODE,
     ATTR_BATTERY_LOW,
+    ATTR_STATE,
 )
 from maxcul._exceptions import (
     MoritzError,
@@ -36,9 +36,4 @@ from maxcul._exceptions import (
     LengthNotMatchingError,
     MissingPayloadParameterError)
 
-# environment imports
-
-# custom imports
-
-# local constants
-__version__ = "0.1.8"
+__version__ = "0.1.10"

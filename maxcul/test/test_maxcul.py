@@ -1,12 +1,8 @@
-import os
-import sys
 import unittest
 from datetime import datetime
 
-myPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, myPath + '/../../')
+from maxcul._messages import MoritzMessage, SetTemperatureMessage, AckMessage, PairPingMessage, PairPongMessage, TimeInformationMessage, WallThermostatControlMessage, ThermostatStateMessage, MissingPayloadParameterError, WakeUpMessage
 
-from maxcul._messages import *
 MESSAGE_SAMPLES = ["Z0C250442016F69039EA50028CC28",
                    "Z0E250202039EA5016F6900011904283C",
                    "Z0CBD0442016F69039EA50028CC35",
@@ -304,18 +300,30 @@ MESSAGE_SAMPLES = ["Z0C250442016F69039EA50028CC28",
                    "Z0C890442016F69039EA50028CA2B",
                    "Z0E890202039EA5016F69000119002834",
                    "Z0C8A0442016F6903CEE20028CA2F",
-                   "Z0E8A020203CEE2016F69000119002828"]
+                   "Z0E8A020203CEE2016F69000119002828",
+                   "Z0CA0025000077712345600100121",
+                   "Z0CA002500007771234560050011E",
+                   "Z0CA002500007771234560050011E",
+                   "Z0CA102500007771234560010001E",
+                   "Z0CA102500007771234560050001E",
+                   "Z0CA102500007771234560050001F",
+                   "Z0CA1025000077712345600500020",
+                   "Z0B010030019977000000000041",
+                   "Z0B01003001997700000000021C",
+                   "Z0B020030019977000000000036"]
+
 
 class MessageSampleInputListTestCase(unittest.TestCase):
     def test_list_input(self):
         for sample in MESSAGE_SAMPLES:
             with self.subTest("Decode " + sample):
-                msg = MoritzMessage.decode_message(sample)
+                MoritzMessage.decode_message(sample)
 
     def test_unknown_messages(self):
         sample = "Z0E250210039EA5016F6900011904283C"
         with self.assertRaises(NotImplementedError):
-            msg = MoritzMessage.decode_message(sample)
+            MoritzMessage.decode_message(sample)
+
 
 class MessageSampleInputTestCase(unittest.TestCase):
     def test_thermostat_state(self):
@@ -399,7 +407,7 @@ class MessageSampleInputTestCase(unittest.TestCase):
         self.assertEqual(msg.receiver_id, 0xE016C)
         self.assertEqual(msg.group_id, 0)
         self.assertEqual(msg.decode_payload('00'), {
-            'devicetype': "Cube",
+            'device_type': "Cube",
         })
 
     def test_time_information_question(self):
@@ -421,7 +429,10 @@ class MessageSampleInputTestCase(unittest.TestCase):
         self.assertEqual(msg.sender_id, 0x123456)
         self.assertEqual(msg.receiver_id, 0xE016C)
         self.assertEqual(msg.group_id, 0)
-        self.assertEqual(msg.decode_payload("0E0102E117"), {'datetime': datetime(2014, 12, 1, 2, 33, 23)})
+        self.assertEqual(
+            msg.decode_payload("0E0102E117"), {
+                'datetime': datetime(
+                    2014, 12, 1, 2, 33, 23)})
 
     def test_wallthermostat_control_message(self):
         sample = "Z0CB9044217A95512DC400019D9"
@@ -436,7 +447,8 @@ class MessageSampleInputTestCase(unittest.TestCase):
             "desired_temperature": 12.5,
             "temperature": 21.7
         })
-        #wallthermostat updated <WallThermostatStateMessage counter:c0 flag:4 sender:17a955 receiver:0 group:0 payload:59011900D9>
+        # wallthermostat updated <WallThermostatStateMessage counter:c0 flag:4
+        # sender:17a955 receiver:0 group:0 payload:59011900D9>
 
 
 class MessageGeneralOutputTestCase(unittest.TestCase):
@@ -464,7 +476,6 @@ class MessageGeneralOutputTestCase(unittest.TestCase):
         self.assertEqual(msg.encode_payload(), expected_result[-2:])
 
     def test_encoding_with_broken_payload(self):
-        expected_result = "Zs0BB900401234560B3554004B"
         msg = SetTemperatureMessage()
         msg.counter = 0xB9
         msg.sender_id = 0x123456
@@ -472,7 +483,7 @@ class MessageGeneralOutputTestCase(unittest.TestCase):
         msg.group_id = 0
         msg.mode = 'manual'
         with self.assertRaises(MissingPayloadParameterError):
-            encoded_message = msg.encode_message()
+            msg.encode_message()
 
 
 class MessageOutputSampleTestCase(unittest.TestCase):
@@ -493,4 +504,6 @@ class MessageOutputSampleTestCase(unittest.TestCase):
         msg.receiver_id = 0xE016C
         msg.group_id = 0x0
         msg.datetime = datetime(2014, 12, 1, 2, 33, 23)
-        self.assertEqual(msg.encode_message(), "Zs0F0204031234560E016C000E0102E117")
+        self.assertEqual(
+            msg.encode_message(),
+            "Zs0F0204031234560E016C000E0102E117")

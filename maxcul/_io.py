@@ -75,11 +75,18 @@ class CulIoThread(threading.Thread):
         # Process pending received messages (if any)
         line = self._readline()
         if line is not None:
-            if line.startswith("21  "):
+            if line.startswith("21"):
                 self._remaining_budget = int(line[3:].strip()) * 10 or 1
                 LOGGER.debug(
                     "Got pending budget: %sms", self._remaining_budget)
+            elif line.startswith("ZERR"):
+                LOGGER.warning(
+                    "Received error message from CUL stick: '%s'",
+                    line
+                )
             elif line.startswith("Z"):
+                LOGGER.debug(
+                    "Received new moritz message: %s", line)
                 self.read_queue.put(line)
             else:
                 LOGGER.debug("Got unhandled response from CUL: '%s'", line)
@@ -166,7 +173,8 @@ class CulIoThread(threading.Thread):
 
     def _writeline(self, command):
         """Sends given command to CUL. Invalidates has_send_budget if command starts with Zs"""
-        LOGGER.debug("Writing command %s", command)
+        if not command == COMMAND_REQUEST_BUDGET:
+            LOGGER.debug("Writing command %s", command)
         if command.startswith("Zs"):
             self._remaining_budget = 0
         try:

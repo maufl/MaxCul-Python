@@ -3,9 +3,10 @@
     maxcul.communication
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    There are two communication classes available which should run in their own thread.
-    CULComThread performs low-level serial communication, CULMessageThread performs high-level
-    communication and spawns a CULComThread for its low-level needs.
+    There are two communication classes available which should run in
+    their own thread. CULComThread performs low-level serial communication,
+    CULMessageThread performs high-level communication and spawns a
+    CULComThread for its low-level needs.
 
     Generally just use CULMessageThread unless you have a good reason not to.
 
@@ -25,7 +26,6 @@ import time
 import logging
 
 # custom imports
-from maxcul._exceptions import MoritzError
 from maxcul._messages import (
     MoritzMessage,
     PairPingMessage, PairPongMessage,
@@ -36,13 +36,16 @@ from maxcul._messages import (
     ShutterContactStateMessage,
     WallThermostatStateMessage,
     WallThermostatControlMessage,
-    WakeUpMessage
+    WakeUpMessage,
+    PushButtonStateMessage
 )
 from maxcul._io import CulIoThread
 from maxcul._const import (
     EVENT_DEVICE_PAIRED, EVENT_DEVICE_REPAIRED, EVENT_THERMOSTAT_UPDATE,
+    EVENT_SHUTTER_UPDATE, EVENT_PUSH_BUTTON_UPDATE,
     ATTR_DEVICE_ID, ATTR_DESIRED_TEMPERATURE, ATTR_MEASURED_TEMPERATURE,
-    ATTR_MODE, ATTR_BATTERY_LOW
+    ATTR_MODE, ATTR_BATTERY_LOW, ATTR_DEVICE_TYPE, ATTR_DEVICE_SERIAL,
+    ATTR_FIRMWARE_VERSION, ATTR_STATE
 )
 
 # local constants
@@ -74,7 +77,7 @@ class MaxConnection(threading.Thread):
         self.com_thread = CulIoThread(
             device_path,
             baudrate,
-            sent_callback = self._sent_callback)
+            sent_callback=self._sent_callback)
         self.stop_requested = threading.Event()
         self._pairing_enabled = threading.Event()
         self._paired_devices = paired_devices or []
@@ -102,6 +105,9 @@ class MaxConnection(threading.Thread):
         def clear_pair():
             self._pairing_enabled.clear()
         threading.Timer(duration, clear_pair).start()
+
+    def add_paired_device(self, device_id):
+        self._paired_devices.append(device_id)
 
     def set_temperature(self, receiver_id, temperature, mode):
         LOGGER.debug(
@@ -153,7 +159,8 @@ class MaxConnection(threading.Thread):
             LOGGER.error(
                 "Communication with serial device is not established, unable to send a message")
             return False
-        if msg.counter in self._outstanding_acks:
+        if msg.counter in self._outstanding_acks \
+           and not isinstance(msg, AckMessage):
             (_, attempt, _) = self._outstanding_acks[msg.counter]
             LOGGER.debug("Repeating message %s attempt %d", msg, attempt)
         else:
@@ -165,11 +172,11 @@ class MaxConnection(threading.Thread):
         self._outstanding_acks[msg.counter] = (None, 1, msg)
 
     def _sent_callback(self, msg):
-        if not msg.counter in self._outstanding_acks:
+        if msg.counter not in self._outstanding_acks:
             return
         LOGGER.debug("Message %s was sent, starting timeout for retry.", msg)
         now = int(time.monotonic())
-        (_, attempt, _ ) = self._outstanding_acks[msg.counter]
+        (_, attempt, _) = self._outstanding_acks[msg.counter]
         self._outstanding_acks[msg.counter] = (now, attempt, msg)
 
     def _resend_message(self):
@@ -201,7 +208,8 @@ class MaxConnection(threading.Thread):
 
     def _send_timeinformation(self, msg):
         if not self.com_thread.has_send_budget:
-            LOGGER.debug("Won't sent time information because budget is too low")
+            LOGGER.debug(
+                "Won't sent time information because budget is too low")
             return
         resp_msg = msg.respond_with(
             TimeInformationMessage,
@@ -245,13 +253,21 @@ class MaxConnection(threading.Thread):
                 if self._send_pong(msg):
                     self._call_callback(
                         EVENT_DEVICE_PAIRED, {
-                            ATTR_DEVICE_ID: msg.sender_id})
+                            ATTR_DEVICE_ID: msg.sender_id,
+                            ATTR_DEVICE_TYPE: msg.device_type,
+                            ATTR_DEVICE_SERIAL: msg.device_serial,
+                            ATTR_FIRMWARE_VERSION: msg.firmware_version
+                        })
             elif msg.receiver_id == self.sender_id:
                 # pairing after battery replacement
                 if self._send_pong(msg):
                     self._call_callback(
                         EVENT_DEVICE_REPAIRED, {
-                            ATTR_DEVICE_ID: msg.sender_id})
+                            ATTR_DEVICE_ID: msg.sender_id,
+                            ATTR_DEVICE_TYPE: msg.device_type,
+                            ATTR_DEVICE_SERIAL: msg.device_serial,
+                            ATTR_FIRMWARE_VERSION: msg.firmware_version
+                        })
             else:
                 # pair to someone else after battery replacement, don't care
                 LOGGER.debug(
@@ -278,13 +294,37 @@ class MaxConnection(threading.Thread):
             if msg.state == "ok":
                 self._propagate_thermostat_change(msg)
 
-        elif isinstance(msg, ShutterContactStateMessage, WallThermostatStateMessage, SetTemperatureMessage, WallThermostatControlMessage):
+        elif isinstance(msg, ShutterContactStateMessage):
+            self._send_ack(msg)
+            self._propagate_shutter_state(msg)
+
+        elif isinstance(msg, PushButtonStateMessage):
+            self._send_ack(msg)
+            self._propagate_push_button_state(msg)
+
+        elif isinstance(msg, WallThermostatStateMessage, SetTemperatureMessage, WallThermostatControlMessage):
             self._send_ack(msg)
 
         else:
             LOGGER.warning(
                 "Unhandled Message of type %s, contains %s",
                 msg.__class__.__name__, msg)
+
+    def _propagate_push_button_state(self, msg):
+        payload = {
+            ATTR_DEVICE_ID: msg.sender_id,
+            ATTR_BATTERY_LOW: msg.battery_low,
+            ATTR_STATE: msg.state
+        }
+        self._call_callback(EVENT_PUSH_BUTTON_UPDATE, payload)
+
+    def _propagate_shutter_state(self, msg):
+        payload = {
+            ATTR_DEVICE_ID: msg.sender_id,
+            ATTR_BATTERY_LOW: msg.battery_low,
+            ATTR_STATE: msg.state
+        }
+        self._call_callback(EVENT_SHUTTER_UPDATE, payload)
 
     def _propagate_thermostat_change(self, msg):
         payload = {

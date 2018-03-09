@@ -19,10 +19,14 @@ import struct
 
 # custom imports
 from maxcul._exceptions import (
-    MoritzError, LengthNotMatchingError,
+    LengthNotMatchingError,
     MissingPayloadParameterError, UnknownMessageError
 )
-from maxcul._const import *
+from maxcul._const import (
+    CUBE, DEVICE_TYPES, DEVICE_TYPES_BY_NAME,
+    MODE_IDS, BOOST_DURATION, DECALC_DAYS,
+    SHUTTER_STATES
+)
 
 
 class MoritzMessage(object):
@@ -32,6 +36,8 @@ class MoritzMessage(object):
     receiver_id = 0
     group_id = 0
     flag = 0
+    length = 0
+    raw_payload = None
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -85,11 +91,13 @@ class MoritzMessage(object):
                 msgtype)
 
         attributes = dict(
+            length=length,
             counter=counter,
             flag=flag,
             group_id=group_id,
             sender_id=sender_id,
-            receiver_id=receiver_id
+            receiver_id=receiver_id,
+            raw_payload=payload
         )
         attributes.update(message_class.decode_payload(payload))
 
@@ -122,14 +130,20 @@ class MoritzMessage(object):
         resp_params = dict(counter=self.counter + 1,
                            sender_id=self.receiver_id,
                            receiver_id=self.sender_id,
-                           group_id=self.group_id)
+                           group_id=self.group_id,
+                           flag=self.flag)
         params = {**resp_params, **kwargs}
         return klass(**params)
 
     def __repr__(self):
-        return "<%s counter:%x flag:%x sender:%x receiver:%x group:%x >" % (
-            self.__class__.__name__, self.counter, self.flag, self.sender_id, self.receiver_id, self.group_id
-        )
+        s = "<{}".format(self.__class__.__name__)
+        for key in self.__dict__:
+            value = self.__dict__[key]
+            if isinstance(value, int):
+                s += " {}:{:x}".format(key, value)
+            else:
+                s += " {}:{:}".format(key, value)
+        return s + ">"
 
 
 class PairPingMessage(MoritzMessage):
@@ -156,11 +170,11 @@ class PairPingMessage(MoritzMessage):
 
 class PairPongMessage(MoritzMessage):
     """Awaited after PairPingMessage is sent by component"""
-    devicetype = 'Cube'
+    device_type = CUBE
 
     @staticmethod
     def decode_payload(payload):
-        return {'devicetype': DEVICE_TYPES[int(payload)]}
+        return {'device_type': DEVICE_TYPES[int(payload)]}
 
     def encode_payload(self):
         return str(DEVICE_TYPES_BY_NAME[self.devicetype]).zfill(2)
@@ -263,7 +277,7 @@ class ConfigTemperaturesMessage(MoritzMessage):
          offset,
          window_Open_Temperature,
          window_Open_Duration) = struct.unpack(">BBBBBBB",
-                                               bytearray.fromhex(self.payload[:14]))
+                                               bytearray.fromhex(payload[:14]))
 
         result = {
             'comfort_Temperature': comfort / 2,
@@ -560,19 +574,21 @@ class SetEcoTemperatureMessage(MoritzMessage):
 class PushButtonStateMessage(MoritzMessage):
 
     state = None
-    rferror = None
+    is_paired = None
     battery_low = None
-    is_retransmission = None
+    rferror = None
 
     @staticmethod
     def decode_payload(payload):
+        payload = bytes.fromhex(payload)
+        higher = payload[1]
+        lower = payload[0]
         return {
-            'state': bool(payload[1] & 0x1),
-            'rferror': bool(payload[0] & 0b100000),
-            'battery_low': bool(payload[0] & 0b1000000),
-            'is_retransmission': bool(payload[0] & 0x50)
+            'state': bool(higher & (1 << 0)),
+            'is_paired': bool(lower & (1 << 4)),
+            'rferror': bool(lower & (1 << 6)),
+            'battery_low': bool(lower & (1 << 7))
         }
-
 
 class ThermostatStateMessage(MoritzMessage):
     """Non-reculary sent by Thermostats to report when valve was moved or command received."""
