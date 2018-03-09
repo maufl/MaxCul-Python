@@ -130,7 +130,8 @@ class MoritzMessage(object):
         resp_params = dict(counter=self.counter + 1,
                            sender_id=self.receiver_id,
                            receiver_id=self.sender_id,
-                           group_id=self.group_id)
+                           group_id=self.group_id,
+                           flag=self.flag)
         params = {**resp_params, **kwargs}
         return klass(**params)
 
