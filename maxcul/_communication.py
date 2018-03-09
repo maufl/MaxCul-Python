@@ -159,7 +159,8 @@ class MaxConnection(threading.Thread):
             LOGGER.error(
                 "Communication with serial device is not established, unable to send a message")
             return False
-        if msg.counter in self._outstanding_acks:
+        if msg.counter in self._outstanding_acks \
+           and not isinstance(msg, AckMessage):
             (_, attempt, _) = self._outstanding_acks[msg.counter]
             LOGGER.debug("Repeating message %s attempt %d", msg, attempt)
         else:
