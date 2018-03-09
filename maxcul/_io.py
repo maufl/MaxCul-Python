@@ -173,7 +173,8 @@ class CulIoThread(threading.Thread):
 
     def _writeline(self, command):
         """Sends given command to CUL. Invalidates has_send_budget if command starts with Zs"""
-        LOGGER.debug("Writing command %s", command)
+        if not command == COMMAND_REQUEST_BUDGET:
+            LOGGER.debug("Writing command %s", command)
         if command.startswith("Zs"):
             self._remaining_budget = 0
         try:
