@@ -581,13 +581,14 @@ class PushButtonStateMessage(MoritzMessage):
     @staticmethod
     def decode_payload(payload):
         payload = bytes.fromhex(payload)
+        higher = payload[1]
+        lower = payload[0]
         return {
-            'state': bool(payload[1] & 0x1),
-            'is_paired': bool(payload[0] & 0b10000),
-            'rferror': bool(payload[0] & 0b1000000),
-            'battery_low': bool(payload[0] & 0b10000000)
+            'state': bool(higher & (1 << 0)),
+            'is_paired': bool(lower & (1 << 4)),
+            'rferror': bool(lower & (1 << 6)),
+            'battery_low': bool(lower & (1 << 7))
         }
-
 
 class ThermostatStateMessage(MoritzMessage):
     """Non-reculary sent by Thermostats to report when valve was moved or command received."""
