@@ -36,6 +36,8 @@ class MoritzMessage(object):
     receiver_id = 0
     group_id = 0
     flag = 0
+    length = 0
+    raw_payload = None
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -89,11 +91,13 @@ class MoritzMessage(object):
                 msgtype)
 
         attributes = dict(
+            length=length,
             counter=counter,
             flag=flag,
             group_id=group_id,
             sender_id=sender_id,
-            receiver_id=receiver_id
+            receiver_id=receiver_id,
+            raw_payload=payload
         )
         attributes.update(message_class.decode_payload(payload))
 
