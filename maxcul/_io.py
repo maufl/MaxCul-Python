@@ -75,7 +75,7 @@ class CulIoThread(threading.Thread):
         # Process pending received messages (if any)
         line = self._readline()
         if line is not None:
-            if line.startswith("21  "):
+            if line.startswith("21"):
                 self._remaining_budget = int(line[3:].strip()) * 10 or 1
                 LOGGER.debug(
                     "Got pending budget: %sms", self._remaining_budget)
