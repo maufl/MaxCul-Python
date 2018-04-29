@@ -64,8 +64,9 @@ class CulIoThread(threading.Thread):
             LOGGER.debug("Unable to send messages, budget to low.")
             while self._remaining_budget < MIN_REQUIRED_BUDGET:
                 self._writeline(COMMAND_REQUEST_BUDGET)
-                self._receive_messages()
-                time.sleep(500)
+                for _ in range(50):
+                    self._receive_messages()
+                    time.sleep(1)
         if (time.monotonic() - self._last_serial_reopen) > 24 * 60 * 60:
             LOGGER.debug("Reopening serial device")
             self._reopen_serial_device()
