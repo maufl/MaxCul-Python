@@ -14,6 +14,7 @@ READLINE_TIMEOUT = 0.0
 COMMAND_REQUEST_BUDGET = 'X'
 
 MIN_REQUIRED_BUDGET = 1500
+COMMAND_CHARACTER_WEIGHT = 30
 
 
 class CulIoThread(threading.Thread):
@@ -31,7 +32,7 @@ class CulIoThread(threading.Thread):
         self._com_port = None
         self._remaining_budget = 0
         self._sent_callback = sent_callback
-        self._last_serial_reopen = time.monotonic()
+        self._waiting_for_budget = False
 
     @property
     def cul_version(self):
@@ -58,24 +59,27 @@ class CulIoThread(threading.Thread):
             self._loop()
 
     def _loop(self):
+        now = int(time.monotonic())
+
         self._receive_messages()
-        self._send_pending_message()
-        if self._remaining_budget < MIN_REQUIRED_BUDGET:
-            LOGGER.debug("Unable to send messages, budget to low.")
+
+        if now % 60 == 0: # every minute, request current budget
             self._writeline(COMMAND_REQUEST_BUDGET)
-            self._receive_messages()
-            while self._remaining_budget < MIN_REQUIRED_BUDGET:
+
+        if self._remaining_budget < MIN_REQUIRED_BUDGET:
+            if not self._waiting_for_budget:
+                LOGGER.debug("Unable to send messages, budget to low.")
                 self._writeline(COMMAND_REQUEST_BUDGET)
-                wait_time = (MIN_REQUIRED_BUDGET - self._remaining_budget) / 10
-                for _ in range(wait_time):
-                    if self._stop_requested.isSet():
-                        break
-                    self._receive_messages()
-                    time.sleep(1)
-        if (time.monotonic() - self._last_serial_reopen) > 24 * 60 * 60:
+            self._waiting_for_budget = True
+        else:
+            self._waiting_for_budget = False
+            self._send_pending_message()
+
+        if now % (24*60*60) == 0: # every 24h reopen serial device
             LOGGER.debug("Reopening serial device")
             self._reopen_serial_device()
             self._last_serial_reopen = time.monotonic()
+
         time.sleep(0.2)
 
     def _receive_messages(self):
@@ -110,10 +114,12 @@ class CulIoThread(threading.Thread):
             return
         try:
             command = pending_message.encode_message()
-            if self._remaining_budget > len(command) * 10:
+            if self._remaining_budget > len(command) * COMMAND_CHARACTER_WEIGHT:
                 self._writeline(command)
                 if self._sent_callback:
                     self._sent_callback(pending_message)
+                if command.startswith("Zs"):
+                    self._remaining_budget -= COMMAND_CHARACTER_WEIGHT * len(command)
             else:
                 self._send_queue.append(pending_message)
                 self._writeline(COMMAND_REQUEST_BUDGET)
@@ -190,8 +196,6 @@ class CulIoThread(threading.Thread):
         """Sends given command to CUL. Invalidates has_send_budget if command starts with Zs"""
         if not command == COMMAND_REQUEST_BUDGET:
             LOGGER.debug("Writing command %s", command)
-        if command.startswith("Zs"):
-            self._remaining_budget -= 30 * (len(command) - 2)
         try:
             self._com_port.write((command + "\r\n").encode())
         except SerialException as err:
