@@ -62,9 +62,12 @@ class CulIoThread(threading.Thread):
         self._send_pending_message()
         if self._remaining_budget < MIN_REQUIRED_BUDGET:
             LOGGER.debug("Unable to send messages, budget to low.")
+            self._writeline(COMMAND_REQUEST_BUDGET)
+            self._receive_messages()
             while self._remaining_budget < MIN_REQUIRED_BUDGET:
                 self._writeline(COMMAND_REQUEST_BUDGET)
-                for _ in range(50):
+                wait_time = (MIN_REQUIRED_BUDGET - self._remaining_budget) / 10
+                for _ in range(wait_time):
                     self._receive_messages()
                     time.sleep(1)
         if (time.monotonic() - self._last_serial_reopen) > 24 * 60 * 60:
@@ -183,7 +186,7 @@ class CulIoThread(threading.Thread):
         if not command == COMMAND_REQUEST_BUDGET:
             LOGGER.debug("Writing command %s", command)
         if command.startswith("Zs"):
-            self._remaining_budget = 0
+            self._remaining_budget -= 30 * (command.count() - 2)
         try:
             self._com_port.write((command + "\r\n").encode())
         except SerialException as err:
