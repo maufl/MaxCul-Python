@@ -186,7 +186,7 @@ class CulIoThread(threading.Thread):
         if not command == COMMAND_REQUEST_BUDGET:
             LOGGER.debug("Writing command %s", command)
         if command.startswith("Zs"):
-            self._remaining_budget -= 30 * (command.count() - 2)
+            self._remaining_budget -= 30 * (len(command) - 2)
         try:
             self._com_port.write((command + "\r\n").encode())
         except SerialException as err:
