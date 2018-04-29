@@ -68,6 +68,8 @@ class CulIoThread(threading.Thread):
                 self._writeline(COMMAND_REQUEST_BUDGET)
                 wait_time = (MIN_REQUIRED_BUDGET - self._remaining_budget) / 10
                 for _ in range(wait_time):
+                    if self._stop_requested.isSet():
+                        break
                     self._receive_messages()
                     time.sleep(1)
         if (time.monotonic() - self._last_serial_reopen) > 24 * 60 * 60:
@@ -163,6 +165,9 @@ class CulIoThread(threading.Thread):
         time.sleep(0.3)
         # disable FHT mode by setting station to 0000
         self._writeline("T01")
+        time.sleep(0.3)
+        # request first budget
+        self._writeline(COMMAND_REQUEST_BUDGET)
         time.sleep(0.3)
         return True
 
