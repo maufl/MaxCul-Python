@@ -63,14 +63,12 @@ class CulIoThread(threading.Thread):
 
         self._receive_messages()
 
-        if now % 60 == 0: # every minute, request current budget
-            self._writeline(COMMAND_REQUEST_BUDGET)
-
         if self._remaining_budget < MIN_REQUIRED_BUDGET:
             if not self._waiting_for_budget:
                 LOGGER.debug("Unable to send messages, budget to low.")
-                self._writeline(COMMAND_REQUEST_BUDGET)
+            self._writeline(COMMAND_REQUEST_BUDGET)
             self._waiting_for_budget = True
+            time.sleep(1)
         else:
             self._waiting_for_budget = False
             self._send_pending_message()
@@ -186,7 +184,7 @@ class CulIoThread(threading.Thread):
             self._com_port = None
         self._remaining_budget = 0
 
-        for timeout in [5, 10, 20, 40]:
+        for timeout in [5, 10, 20, 40, 80, 160]:
             if self._open_serial_device():
                 return True
             time.sleep(timeout)
