@@ -36,4 +36,4 @@ from maxcul._exceptions import (
     LengthNotMatchingError,
     MissingPayloadParameterError)
 
-__version__ = "0.1.10"
+__version__ = "0.1.11"
