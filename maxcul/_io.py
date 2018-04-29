@@ -9,7 +9,7 @@ from serial import Serial, SerialException
 LOGGER = logging.getLogger(__name__)
 
 MAX_QUEUED_COMMANDS = 10
-READLINE_TIMEOUT = 0.5
+READLINE_TIMEOUT = 0.0
 
 COMMAND_REQUEST_BUDGET = 'X'
 
@@ -58,22 +58,23 @@ class CulIoThread(threading.Thread):
             self._loop()
 
     def _loop(self):
-        self._receive_message()
+        self._receive_messages()
         self._send_pending_message()
-        if self._remaining_budget == 0:
-            self._writeline(COMMAND_REQUEST_BUDGET)
-            while self._remaining_budget == 0:
-                self._receive_message()
         if self._remaining_budget < MIN_REQUIRED_BUDGET:
             LOGGER.debug("Unable to send messages, budget to low.")
             while self._remaining_budget < MIN_REQUIRED_BUDGET:
                 self._writeline(COMMAND_REQUEST_BUDGET)
-                self._receive_message()
+                self._receive_messages()
                 time.sleep(500)
         if (time.monotonic() - self._last_serial_reopen) > 24 * 60 * 60:
+            LOGGER.debug("Reopening serial device")
             self._reopen_serial_device()
             self._last_serial_reopen = time.monotonic()
         time.sleep(0.2)
+
+    def _receive_messages(self):
+        while self._receive_message():
+            next
 
     def _receive_message(self):
         # Process pending received messages (if any)
@@ -94,6 +95,7 @@ class CulIoThread(threading.Thread):
                 self.read_queue.put(line)
             else:
                 LOGGER.debug("Got unhandled response from CUL: '%s'", line)
+        return line is not None
 
     def _send_pending_message(self):
         try:
