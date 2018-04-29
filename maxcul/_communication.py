@@ -240,8 +240,6 @@ class MaxConnection(threading.Thread):
             # discard messages not addressed to us
             return
 
-        LOGGER.debug("Received message %s (%d)", msg, signal_strenth)
-
         if isinstance(msg, PairPingMessage):
             # Some peer wants to pair. Let's see...
             if msg.receiver_id == 0x0:
@@ -278,6 +276,8 @@ class MaxConnection(threading.Thread):
         if msg.receiver_id == 0 and msg.sender_id not in self._paired_devices:
             # discard broadcast messages from devices we are not paired with
             return
+
+        LOGGER.debug("Received message %s (%d)", msg, signal_strenth)
 
         if isinstance(msg, TimeInformationMessage):
             if not msg.datetime:

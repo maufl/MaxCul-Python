@@ -31,6 +31,7 @@ class CulIoThread(threading.Thread):
         self._com_port = None
         self._remaining_budget = 0
         self._sent_callback = sent_callback
+        self._last_serial_reopen = time.monotonic()
 
     @property
     def cul_version(self):
@@ -68,7 +69,10 @@ class CulIoThread(threading.Thread):
             while self._remaining_budget < MIN_REQUIRED_BUDGET:
                 self._writeline(COMMAND_REQUEST_BUDGET)
                 self._receive_message()
-                time.sleep(1)
+                time.sleep(500)
+        if (time.monotonic() - self._last_serial_reopen) > 24 * 60 * 60:
+            self._reopen_serial_device()
+            self._last_serial_reopen = time.monotonic()
         time.sleep(0.2)
 
     def _receive_message(self):
